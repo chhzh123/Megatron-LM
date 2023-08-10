@@ -78,6 +78,7 @@ def model_provider(pre_process=True, post_process=True,
                     post_process=post_process,
                     add_encoder=add_encoder,
                     add_decoder=add_decoder)
+    print_rank_0(model)
     return model
 
 
