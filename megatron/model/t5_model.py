@@ -115,7 +115,8 @@ class T5Model(MegatronModule):
             init_method=init_method,
             scaled_init_method=scaled_init_method,
             pre_process=self.pre_process,
-            post_process=self.post_process)
+            post_process=self.post_process,
+            is_t5=True)
 
         self.initialize_word_embeddings(init_method_normal)
 

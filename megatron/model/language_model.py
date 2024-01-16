@@ -23,6 +23,7 @@ from megatron import mpu
 from .module import MegatronModule
 from megatron.model.enums import LayerType, AttnMaskType
 from megatron.model.transformer import ParallelTransformer
+from megatron.model.transformer_t5 import ParallelTransformer as T5ParallelTransformer
 from megatron.model.utils import get_linear_layer
 from megatron.model.utils import init_method_normal, scaled_init_method_normal
 
@@ -60,7 +61,7 @@ def get_language_model(num_tokentypes, add_pooler,
                        scaled_init_method=None, add_encoder=True,
                        add_decoder=False,
                        decoder_attn_mask_type=AttnMaskType.causal,
-                       pre_process=True, post_process=True):
+                       pre_process=True, post_process=True, is_t5=False):
     """Build language model and return along with the key to save."""
     args = get_args()
 
@@ -82,7 +83,8 @@ def get_language_model(num_tokentypes, add_pooler,
         decoder_attn_mask_type=decoder_attn_mask_type,
         add_pooler=add_pooler,
         pre_process=pre_process,
-        post_process=post_process
+        post_process=post_process,
+        is_t5=is_t5,
     )
     # key used for checkpoints.
     language_model_key = 'language_model'
@@ -329,7 +331,8 @@ class TransformerLanguageModel(MegatronModule):
                  decoder_attn_mask_type=AttnMaskType.causal,
                  add_pooler=False,
                  pre_process=True,
-                 post_process=True):
+                 post_process=True,
+                 is_t5=False):
         super(TransformerLanguageModel, self).__init__()
         args = get_args()
 
@@ -359,13 +362,22 @@ class TransformerLanguageModel(MegatronModule):
         # Encoder (usually set to True, False if part of an encoder-decoder
         # architecture and in encoder-only stage).
         if self.add_encoder:
-            self.encoder = ParallelTransformer(
-                self.init_method,
-                output_layer_init_method,
-                self_attn_mask_type=self.encoder_attn_mask_type,
-                pre_process=self.pre_process,
-                post_process=self.post_process
-            )
+            if not is_t5:
+                self.encoder = ParallelTransformer(
+                    self.init_method,
+                    output_layer_init_method,
+                    self_attn_mask_type=self.encoder_attn_mask_type,
+                    pre_process=self.pre_process,
+                    post_process=self.post_process
+                )
+            else:
+                self.encoder = T5ParallelTransformer(
+                    self.init_method,
+                    output_layer_init_method,
+                    self_attn_mask_type=self.encoder_attn_mask_type,
+                    pre_process=self.pre_process,
+                    post_process=self.post_process
+                )
             self._encoder_key = 'encoder'
         else:
             self.encoder = None
@@ -373,13 +385,22 @@ class TransformerLanguageModel(MegatronModule):
         # Decoder (usually set to False, True if part of an encoder-decoder
         # architecture and in decoder-only stage).
         if self.add_decoder:
-            self.decoder = ParallelTransformer(
-                self.init_method,
-                output_layer_init_method,
-                layer_type=LayerType.decoder,
-                self_attn_mask_type=self.decoder_attn_mask_type,
-                pre_process=self.pre_process,
-                post_process=self.post_process)
+            if not is_t5:
+                self.decoder = ParallelTransformer(
+                    self.init_method,
+                    output_layer_init_method,
+                    layer_type=LayerType.decoder,
+                    self_attn_mask_type=self.decoder_attn_mask_type,
+                    pre_process=self.pre_process,
+                    post_process=self.post_process)
+            else:
+                self.decoder = T5ParallelTransformer(
+                    self.init_method,
+                    output_layer_init_method,
+                    layer_type=LayerType.decoder,
+                    self_attn_mask_type=self.decoder_attn_mask_type,
+                    pre_process=self.pre_process,
+                    post_process=self.post_process)
             self._decoder_key = 'decoder'
         else:
             self.decoder = None
